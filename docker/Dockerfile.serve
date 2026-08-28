@@ -1,0 +1,36 @@
+# Lightweight inference image
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Create a non-root user for the serving process.
+RUN groupadd --system appuser \
+    && useradd --system --gid appuser --create-home appuser
+
+# Install only inference dependencies.
+COPY requirements/serve.txt /app/requirements.txt
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy only application code needed for inference.
+COPY src/ /app/src/
+
+# Create the checkpoint directory and give ownership to the
+# non-root application user.
+RUN mkdir -p /app/checkpoints \
+    && chown -R appuser:appuser /app
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV MODEL_PATH=/app/checkpoints/classifier_v1.pt
+ENV PORT=8080
+
+USER appuser
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)" || exit 1
+
+CMD ["python", "src/serve.py"]
