@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+venv
+env
+__pycache__
+*.pyc
+
+data
+checkpoints
+
+test_image.png
+
+.vscode
+.idea
+
+*.log
